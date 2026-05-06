@@ -1,0 +1,285 @@
+### ============================================================
+### PAYOUT SYSTEM - API TESTS
+### Install: VS Code Extension → "REST Client" by Huachao Mao
+### Usage: Click "Send Request" above each request
+### ============================================================
+
+@baseUrl = http://localhost:4000/api/v1
+@opsToken = REPLACE_WITH_OPS_TOKEN_AFTER_LOGIN
+@financeToken = REPLACE_WITH_FINANCE_TOKEN_AFTER_LOGIN
+@vendorId = REPLACE_WITH_VENDOR_ID
+@payoutId = REPLACE_WITH_PAYOUT_ID
+
+
+### ============================================================
+### 🔐 AUTH
+### ============================================================
+
+### 1. Login as OPS
+# @name opsLogin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "ops@demo.com",
+  "password": "ops123"
+}
+
+### ----------------------------------------------------------------
+
+### 2. Login as FINANCE
+# @name financeLogin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "finance@demo.com",
+  "password": "fin123"
+}
+
+### ----------------------------------------------------------------
+
+### 3. Login - Missing fields (should fail 400)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "ops@demo.com"
+}
+
+### ----------------------------------------------------------------
+
+### 4. Login - Wrong password (should fail 401)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "ops@demo.com",
+  "password": "wrongpass"
+}
+
+
+### ============================================================
+### 🏪 VENDORS
+### ============================================================
+
+### 5. Get all vendors (any logged-in user)
+GET {{baseUrl}}/vendors
+Authorization: Bearer {{opsToken}}
+
+### ----------------------------------------------------------------
+
+### 6. Create vendor (OPS)
+POST {{baseUrl}}/vendors
+Authorization: Bearer {{opsToken}}
+Content-Type: application/json
+
+{
+  "name": "Kumar Electronics",
+  "upi_id": "kumar@upi",
+  "bank_account": "5566778899",
+  "ifsc": "AXIS0001122"
+}
+
+### ----------------------------------------------------------------
+
+### 7. Create vendor - Missing name (should fail 400)
+POST {{baseUrl}}/vendors
+Authorization: Bearer {{opsToken}}
+Content-Type: application/json
+
+{
+  "upi_id": "noname@upi"
+}
+
+### ----------------------------------------------------------------
+
+### 8. Create vendor - No token (should fail 401)
+POST {{baseUrl}}/vendors
+Content-Type: application/json
+
+{
+  "name": "Ghost Vendor"
+}
+
+
+### ============================================================
+### 💸 PAYOUTS - CREATE & READ
+### ============================================================
+
+### 9. Create payout - Draft (OPS only)
+POST {{baseUrl}}/payouts
+Authorization: Bearer {{opsToken}}
+Content-Type: application/json
+
+{
+  "vendor_id": "{{vendorId}}",
+  "amount": 7500,
+  "mode": "UPI",
+  "note": "Test payout for API testing"
+}
+
+### ----------------------------------------------------------------
+
+### 10. Create payout - Invalid amount (should fail 400)
+POST {{baseUrl}}/payouts
+Authorization: Bearer {{opsToken}}
+Content-Type: application/json
+
+{
+  "vendor_id": "{{vendorId}}",
+  "amount": -100,
+  "mode": "UPI"
+}
+
+### ----------------------------------------------------------------
+
+### 11. Create payout - FINANCE tries to create (should fail 403)
+POST {{baseUrl}}/payouts
+Authorization: Bearer {{financeToken}}
+Content-Type: application/json
+
+{
+  "vendor_id": "{{vendorId}}",
+  "amount": 5000,
+  "mode": "IMPS"
+}
+
+### ----------------------------------------------------------------
+
+### 12. Get all payouts (no filter)
+GET {{baseUrl}}/payouts
+Authorization: Bearer {{opsToken}}
+
+### ----------------------------------------------------------------
+
+### 13. Get payouts - Filter by status=Draft
+GET {{baseUrl}}/payouts?status=Draft
+Authorization: Bearer {{opsToken}}
+
+### ----------------------------------------------------------------
+
+### 14. Get payouts - Filter by status=Submitted
+GET {{baseUrl}}/payouts?status=Submitted
+Authorization: Bearer {{financeToken}}
+
+### ----------------------------------------------------------------
+
+### 15. Get payouts - Filter by status=Approved
+GET {{baseUrl}}/payouts?status=Approved
+Authorization: Bearer {{opsToken}}
+
+### ----------------------------------------------------------------
+
+### 16. Get payouts - Filter by status=Rejected
+GET {{baseUrl}}/payouts?status=Rejected
+Authorization: Bearer {{opsToken}}
+
+### ----------------------------------------------------------------
+
+### 17. Get payouts - Pagination (page 1, limit 2)
+GET {{baseUrl}}/payouts?page=1&limit=2
+Authorization: Bearer {{opsToken}}
+
+### ----------------------------------------------------------------
+
+### 18. Get payout by ID (with audit trail)
+GET {{baseUrl}}/payouts/{{payoutId}}
+Authorization: Bearer {{opsToken}}
+
+### ----------------------------------------------------------------
+
+### 19. Get payout - Invalid ID (should fail 500/cast error)
+GET {{baseUrl}}/payouts/invalidid123
+Authorization: Bearer {{opsToken}}
+
+
+### ============================================================
+### 🔁 PAYOUT STATUS TRANSITIONS
+### ============================================================
+
+### 20. Submit payout - Draft → Submitted (OPS only)
+POST {{baseUrl}}/payouts/{{payoutId}}/submit
+Authorization: Bearer {{opsToken}}
+
+### ----------------------------------------------------------------
+
+### 21. Submit payout - FINANCE tries to submit (should fail 403)
+POST {{baseUrl}}/payouts/{{payoutId}}/submit
+Authorization: Bearer {{financeToken}}
+
+### ----------------------------------------------------------------
+
+### 22. Submit payout - Already Submitted (should fail 400)
+POST {{baseUrl}}/payouts/{{payoutId}}/submit
+Authorization: Bearer {{opsToken}}
+
+### ----------------------------------------------------------------
+
+### 23. Approve payout - Submitted → Approved (FINANCE only)
+POST {{baseUrl}}/payouts/{{payoutId}}/approve
+Authorization: Bearer {{financeToken}}
+
+### ----------------------------------------------------------------
+
+### 24. Approve payout - OPS tries to approve (should fail 403)
+POST {{baseUrl}}/payouts/{{payoutId}}/approve
+Authorization: Bearer {{opsToken}}
+
+### ----------------------------------------------------------------
+
+### 25. Approve payout - Not Submitted status (should fail 400)
+POST {{baseUrl}}/payouts/{{payoutId}}/approve
+Authorization: Bearer {{financeToken}}
+
+### ----------------------------------------------------------------
+
+### 26. Reject payout - Submitted → Rejected (FINANCE only)
+POST {{baseUrl}}/payouts/{{payoutId}}/reject
+Authorization: Bearer {{financeToken}}
+Content-Type: application/json
+
+{
+  "reason": "Invoice amount mismatch with PO"
+}
+
+### ----------------------------------------------------------------
+
+### 27. Reject payout - Missing reason (should fail 400)
+POST {{baseUrl}}/payouts/{{payoutId}}/reject
+Authorization: Bearer {{financeToken}}
+Content-Type: application/json
+
+{}
+
+### ----------------------------------------------------------------
+
+### 28. Reject payout - OPS tries to reject (should fail 403)
+POST {{baseUrl}}/payouts/{{payoutId}}/reject
+Authorization: Bearer {{opsToken}}
+Content-Type: application/json
+
+{
+  "reason": "Should not work"
+}
+
+### ----------------------------------------------------------------
+
+### 29. Direct Draft → Approve (should fail 400 - invalid transition)
+### First create a new Draft payout, then try to approve directly
+POST {{baseUrl}}/payouts/{{payoutId}}/approve
+Authorization: Bearer {{financeToken}}
+
+
+### ============================================================
+### 🔒 SECURITY TESTS
+### ============================================================
+
+### 30. No token on protected route (should fail 401)
+GET {{baseUrl}}/payouts
+
+### ----------------------------------------------------------------
+
+### 31. Invalid token (should fail 401)
+GET {{baseUrl}}/payouts
+Authorization: Bearer invalidtoken.fake.jwt
