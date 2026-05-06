@@ -17,7 +17,13 @@ dotenv.config({ path: './.env' });
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://payouts-uwfw.vercel.app',
+    'http://localhost:5173',
+  ],
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
