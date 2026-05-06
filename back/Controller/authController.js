@@ -13,8 +13,8 @@ export const login = async (req, res, next) => {
 
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+      process.env.jwt_secret,
+      { expiresIn: process.env.jwt_expire || '7d' }
     );
 
     return res.status(200).json({ success: true, token, role: user.role, email: user.email });
