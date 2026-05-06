@@ -78,7 +78,7 @@ const Navbar = () => {
             </div>
             <div className="flex flex-col overflow-hidden">
               <span className="text-sm font-semibold text-slate-800 truncate">
-                {user.name || user.email.split('@')[0]}
+                {user.name || (user.email ? user.email.split('@')[0] : 'User')}
               </span>
               <span className="text-xs text-slate-500">{user.role}</span>
             </div>

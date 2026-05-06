@@ -1,4 +1,26 @@
+# Dependencies
 node_modules/
+
+# Environment
 .env
-.DS_Store
+.env.*
+
+# Frontend build output (served but not tracked)
+dist/
+
+# Logs
 *.log
+logs/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Uploads
+public/upload/
+public/temp/
